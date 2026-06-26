@@ -9,3 +9,6 @@ output "auth_ecr_url" {
 output "chat_ecr_url" {
   value = module.chat_ecr.repository_url
 }
+output "frontend_ecr_url" {
+  value = module.frontend_ecr.repository_url
+}

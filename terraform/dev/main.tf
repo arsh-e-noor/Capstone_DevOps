@@ -22,3 +22,8 @@ module "chat_ecr" {
 
   repository_name = "chat-service"
 }
+module "frontend_ecr" {
+  source = "../modules/ecr"
+
+  repository_name = "chat-app-client"
+}
