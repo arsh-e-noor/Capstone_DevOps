@@ -1,0 +1,19 @@
+---
+- name: Install Docker dependencies
+  apt:
+    name:
+      - docker.io
+    state: present
+    update_cache: yes
+
+- name: Start Docker
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add ubuntu user to docker group
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes

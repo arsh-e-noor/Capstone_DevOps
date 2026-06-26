@@ -1,0 +1,13 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install common packages
+  apt:
+    name:
+      - openjdk-17-jdk
+      - git
+      - curl
+      - unzip
+    state: present

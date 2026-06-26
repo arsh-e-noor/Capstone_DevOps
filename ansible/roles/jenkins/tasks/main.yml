@@ -1,0 +1,16 @@
+---
+- name: Create Jenkins Docker Volume
+  community.docker.docker_volume:
+    name: jenkins_home
+
+- name: Run Jenkins Container
+  community.docker.docker_container:
+    name: jenkins
+    image: jenkins/jenkins:lts-jdk17
+    state: started
+    restart_policy: unless-stopped
+    published_ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
