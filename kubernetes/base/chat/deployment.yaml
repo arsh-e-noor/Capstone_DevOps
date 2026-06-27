@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: chat-dev
+
+spec:
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: chat-service
+
+  template:
+    metadata:
+      labels:
+        app: chat-service
+
+    spec:
+      containers:
+        - name: chat-service
+
+          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-service:v1.0
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8010
+
+          env:
+            - name: SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: SERVER_PORT
+
+            - name: MONGO_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: MONGO_HOST
+
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: REDIS_HOST
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            tcpSocket:
+              port: 8010
+            periodSeconds: 10
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 60
+            periodSeconds: 20
