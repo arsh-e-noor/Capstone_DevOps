@@ -23,7 +23,7 @@ spec:
       containers:
         - name: auth-service
 
-          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/auth-service:v1.0
+          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/auth-service:latest
 
           imagePullPolicy: Always
 
@@ -54,6 +54,18 @@ spec:
                 secretKeyRef:
                   name: auth-secret
                   key: JWT_SECRET
+                  
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: DB_HOST
+
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: DB_NAME
 
           resources:
             requests:

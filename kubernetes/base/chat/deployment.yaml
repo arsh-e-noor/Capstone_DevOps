@@ -1,5 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: chat-service
   namespace: chat-dev
@@ -23,7 +24,7 @@ spec:
       containers:
         - name: chat-service
 
-          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-service:v1.0
+          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-service:latest
 
           imagePullPolicy: Always
 
@@ -37,17 +38,23 @@ spec:
                   name: chat-config
                   key: SERVER_PORT
 
-            - name: MONGO_HOST
+            - name: MONGO_URI
               valueFrom:
                 configMapKeyRef:
                   name: chat-config
-                  key: MONGO_HOST
+                  key: MONGO_URI
 
             - name: REDIS_HOST
               valueFrom:
                 configMapKeyRef:
                   name: chat-config
                   key: REDIS_HOST
+
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: REDIS_PORT
 
           resources:
             requests:

@@ -23,7 +23,7 @@ spec:
       containers:
         - name: frontend
 
-          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-app-client:v1.0
+          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-app-client:latest
 
           imagePullPolicy: Always
 
