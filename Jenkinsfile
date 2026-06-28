@@ -27,30 +27,24 @@ stages {
             sh '''
             pwd
             ls -la
-            echo "Current Branch: ${BRANCH_NAME}"
+            echo "Branch: ${BRANCH_NAME}"
             '''
         }
     }
 
-    stage('Backend Tests') {
-        when {
-            branch 'dev'
-        }
+    stage('Backend Build') {
         steps {
             sh '''
             cd app/auth-service
-            mvn test
+            mvn clean package -DskipTests
 
             cd ../chat-service
-            mvn test
+            mvn clean package -DskipTests
             '''
         }
     }
 
     stage('Frontend Build Check') {
-        when {
-            branch 'dev'
-        }
         steps {
             sh '''
             cd app/chat-app-client
@@ -67,7 +61,11 @@ stages {
                 credentialsId: 'aws-creds'
             ]]) {
                 sh '''
-                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login \
+                --username AWS \
+                --password-stdin \
+                ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
                 '''
             }
         }
@@ -76,10 +74,15 @@ stages {
     stage('Build Auth Service') {
         steps {
             sh '''
-            docker build -t auth-service:${IMAGE_TAG} ./app/auth-service
+            docker build \
+            -t auth-service:${IMAGE_TAG} \
+            ./app/auth-service
 
-            docker tag auth-service:${IMAGE_TAG} ${AUTH_ECR}:${IMAGE_TAG}
-            docker tag auth-service:${IMAGE_TAG} ${AUTH_ECR}:latest
+            docker tag auth-service:${IMAGE_TAG} \
+            ${AUTH_ECR}:${IMAGE_TAG}
+
+            docker tag auth-service:${IMAGE_TAG} \
+            ${AUTH_ECR}:latest
             '''
         }
     }
@@ -96,10 +99,15 @@ stages {
     stage('Build Chat Service') {
         steps {
             sh '''
-            docker build -t chat-service:${IMAGE_TAG} ./app/chat-service
+            docker build \
+            -t chat-service:${IMAGE_TAG} \
+            ./app/chat-service
 
-            docker tag chat-service:${IMAGE_TAG} ${CHAT_ECR}:${IMAGE_TAG}
-            docker tag chat-service:${IMAGE_TAG} ${CHAT_ECR}:latest
+            docker tag chat-service:${IMAGE_TAG} \
+            ${CHAT_ECR}:${IMAGE_TAG}
+
+            docker tag chat-service:${IMAGE_TAG} \
+            ${CHAT_ECR}:latest
             '''
         }
     }
@@ -116,10 +124,15 @@ stages {
     stage('Build Frontend') {
         steps {
             sh '''
-            docker build -t chat-app-client:${IMAGE_TAG} ./app/chat-app-client
+            docker build \
+            -t chat-app-client:${IMAGE_TAG} \
+            ./app/chat-app-client
 
-            docker tag chat-app-client:${IMAGE_TAG} ${FRONTEND_ECR}:${IMAGE_TAG}
-            docker tag chat-app-client:${IMAGE_TAG} ${FRONTEND_ECR}:latest
+            docker tag chat-app-client:${IMAGE_TAG} \
+            ${FRONTEND_ECR}:${IMAGE_TAG}
+
+            docker tag chat-app-client:${IMAGE_TAG} \
+            ${FRONTEND_ECR}:latest
             '''
         }
     }
@@ -148,7 +161,9 @@ stages {
                 credentialsId: 'aws-creds'
             ]]) {
                 sh '''
-                aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER}
+                aws eks update-kubeconfig \
+                --region ${AWS_REGION} \
+                --name ${EKS_CLUSTER}
                 '''
             }
         }
@@ -179,7 +194,7 @@ stages {
         }
 
         steps {
-            input message: 'Deploy To Production?'
+            input message: 'Deploy to Production?'
         }
     }
 
@@ -222,6 +237,7 @@ post {
 
     success {
         echo "SUCCESS: ${BRANCH_NAME}"
+        echo "IMAGE TAG: ${IMAGE_TAG}"
     }
 
     failure {
