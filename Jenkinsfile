@@ -1,9 +1,7 @@
 pipeline {
 agent any
 
-```
 environment {
-
     AWS_REGION = 'ap-south-1'
     AWS_ACCOUNT_ID = '235130525547'
 
@@ -29,12 +27,15 @@ stages {
             sh '''
             pwd
             ls -la
-            echo "Branch: ${BRANCH_NAME}"
+            echo "Current Branch: ${BRANCH_NAME}"
             '''
         }
     }
 
     stage('Backend Tests') {
+        when {
+            branch 'dev'
+        }
         steps {
             sh '''
             cd app/auth-service
@@ -47,6 +48,9 @@ stages {
     }
 
     stage('Frontend Build Check') {
+        when {
+            branch 'dev'
+        }
         steps {
             sh '''
             cd app/chat-app-client
@@ -58,18 +62,12 @@ stages {
 
     stage('AWS ECR Login') {
         steps {
-
             withCredentials([[
                 $class: 'AmazonWebServicesCredentialsBinding',
                 credentialsId: 'aws-creds'
             ]]) {
-
                 sh '''
-                aws ecr get-login-password --region ${AWS_REGION} | \
-                docker login \
-                --username AWS \
-                --password-stdin \
-                ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
                 '''
             }
         }
@@ -77,24 +75,17 @@ stages {
 
     stage('Build Auth Service') {
         steps {
-
             sh '''
-            docker build \
-            -t auth-service:${IMAGE_TAG} \
-            ./app/auth-service
+            docker build -t auth-service:${IMAGE_TAG} ./app/auth-service
 
-            docker tag auth-service:${IMAGE_TAG} \
-            ${AUTH_ECR}:${IMAGE_TAG}
-
-            docker tag auth-service:${IMAGE_TAG} \
-            ${AUTH_ECR}:latest
+            docker tag auth-service:${IMAGE_TAG} ${AUTH_ECR}:${IMAGE_TAG}
+            docker tag auth-service:${IMAGE_TAG} ${AUTH_ECR}:latest
             '''
         }
     }
 
     stage('Push Auth Service') {
         steps {
-
             sh '''
             docker push ${AUTH_ECR}:${IMAGE_TAG}
             docker push ${AUTH_ECR}:latest
@@ -104,24 +95,17 @@ stages {
 
     stage('Build Chat Service') {
         steps {
-
             sh '''
-            docker build \
-            -t chat-service:${IMAGE_TAG} \
-            ./app/chat-service
+            docker build -t chat-service:${IMAGE_TAG} ./app/chat-service
 
-            docker tag chat-service:${IMAGE_TAG} \
-            ${CHAT_ECR}:${IMAGE_TAG}
-
-            docker tag chat-service:${IMAGE_TAG} \
-            ${CHAT_ECR}:latest
+            docker tag chat-service:${IMAGE_TAG} ${CHAT_ECR}:${IMAGE_TAG}
+            docker tag chat-service:${IMAGE_TAG} ${CHAT_ECR}:latest
             '''
         }
     }
 
     stage('Push Chat Service') {
         steps {
-
             sh '''
             docker push ${CHAT_ECR}:${IMAGE_TAG}
             docker push ${CHAT_ECR}:latest
@@ -131,24 +115,17 @@ stages {
 
     stage('Build Frontend') {
         steps {
-
             sh '''
-            docker build \
-            -t chat-app-client:${IMAGE_TAG} \
-            ./app/chat-app-client
+            docker build -t chat-app-client:${IMAGE_TAG} ./app/chat-app-client
 
-            docker tag chat-app-client:${IMAGE_TAG} \
-            ${FRONTEND_ECR}:${IMAGE_TAG}
-
-            docker tag chat-app-client:${IMAGE_TAG} \
-            ${FRONTEND_ECR}:latest
+            docker tag chat-app-client:${IMAGE_TAG} ${FRONTEND_ECR}:${IMAGE_TAG}
+            docker tag chat-app-client:${IMAGE_TAG} ${FRONTEND_ECR}:latest
             '''
         }
     }
 
     stage('Push Frontend') {
         steps {
-
             sh '''
             docker push ${FRONTEND_ECR}:${IMAGE_TAG}
             docker push ${FRONTEND_ECR}:latest
@@ -166,16 +143,12 @@ stages {
         }
 
         steps {
-
             withCredentials([[
                 $class: 'AmazonWebServicesCredentialsBinding',
                 credentialsId: 'aws-creds'
             ]]) {
-
                 sh '''
-                aws eks update-kubeconfig \
-                --region ${AWS_REGION} \
-                --name ${EKS_CLUSTER}
+                aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER}
                 '''
             }
         }
@@ -188,7 +161,6 @@ stages {
         }
 
         steps {
-
             sh '''
             kubectl create namespace chat-test --dry-run=client -o yaml | kubectl apply -f -
 
@@ -207,7 +179,7 @@ stages {
         }
 
         steps {
-            input message: 'Deploy to Production?'
+            input message: 'Deploy To Production?'
         }
     }
 
@@ -218,7 +190,6 @@ stages {
         }
 
         steps {
-
             sh '''
             kubectl create namespace chat-prod --dry-run=client -o yaml | kubectl apply -f -
 
@@ -240,21 +211,8 @@ stages {
         }
 
         steps {
-
             sh '''
             kubectl get pods -A
-
-            kubectl rollout status deployment/auth-service \
-            -n ${BRANCH_NAME == "prod" ? "chat-prod" : "chat-test"} \
-            --timeout=300s || true
-
-            kubectl rollout status deployment/chat-service \
-            -n ${BRANCH_NAME == "prod" ? "chat-prod" : "chat-test"} \
-            --timeout=300s || true
-
-            kubectl rollout status deployment/frontend \
-            -n ${BRANCH_NAME == "prod" ? "chat-prod" : "chat-test"} \
-            --timeout=300s || true
             '''
         }
     }
@@ -263,17 +221,12 @@ stages {
 post {
 
     success {
-
-        echo "SUCCESS"
-        echo "Branch: ${BRANCH_NAME}"
-        echo "Tag: ${IMAGE_TAG}"
+        echo "SUCCESS: ${BRANCH_NAME}"
     }
 
     failure {
-
-        echo "FAILED"
+        echo "FAILED: ${BRANCH_NAME}"
     }
 }
-```
 
 }
