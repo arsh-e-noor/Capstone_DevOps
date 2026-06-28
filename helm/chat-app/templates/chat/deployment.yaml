@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: chat-service
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: {{ .Values.chat.replicas }}
+
+  strategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: chat-service
+
+  template:
+    metadata:
+      labels:
+        app: chat-service
+
+    spec:
+      containers:
+        - name: chat-service
+
+          image: {{ .Values.chat.image.repository }}:{{ .Values.chat.image.tag }}
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8010
+
+          env:
+            - name: SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: SERVER_PORT
+
+            - name: MONGO_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: MONGO_URI
+
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: REDIS_HOST
+
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: REDIS_PORT
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            tcpSocket:
+              port: 8010
+            periodSeconds: 10
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 60
+            periodSeconds: 20
