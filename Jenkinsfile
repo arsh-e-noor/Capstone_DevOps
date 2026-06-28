@@ -22,16 +22,17 @@ pipeline {
             }
         }
 
-        stage('Repo Info') {
+        stage('Branch Info') {
             steps {
                 sh '''
                 echo "Branch: ${BRANCH_NAME}"
+                pwd
                 ls -la
                 '''
             }
         }
 
-        stage('Build Backend (Skip Tests)') {
+        stage('Backend Build (Skip Tests)') {
             steps {
                 sh '''
                 cd app/auth-service && mvn clean package -DskipTests
@@ -50,22 +51,23 @@ pipeline {
             }
         }
 
-        stage('AWS Login + ECR Login') {
+        stage('AWS Login (ECR + EKS)') {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-creds'
                 ]]) {
+
                     sh '''
                     aws sts get-caller-identity
-
-                    aws eks update-kubeconfig \
-                        --region ${AWS_REGION} \
-                        --name ${EKS_CLUSTER}
 
                     aws ecr get-login-password --region ${AWS_REGION} | \
                     docker login --username AWS \
                     --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+                    aws eks update-kubeconfig \
+                        --region ${AWS_REGION} \
+                        --name ${EKS_CLUSTER}
                     '''
                 }
             }
@@ -115,6 +117,7 @@ pipeline {
 
         stage('Deploy to Test') {
             when { branch 'test' }
+
             steps {
                 sh '''
                 kubectl create ns chat-test --dry-run=client -o yaml | kubectl apply -f -
@@ -126,15 +129,17 @@ pipeline {
             }
         }
 
-        stage('Approval Prod') {
+        stage('Approval for Prod') {
             when { branch 'prod' }
+
             steps {
-                input message: "Deploy to PROD?"
+                input message: "Deploy to PRODUCTION?"
             }
         }
 
         stage('Deploy to Prod') {
             when { branch 'prod' }
+
             steps {
                 sh '''
                 kubectl create ns chat-prod --dry-run=client -o yaml | kubectl apply -f -
@@ -146,13 +151,14 @@ pipeline {
             }
         }
 
-        stage('Verify') {
+        stage('Verify Deployment') {
             when {
                 anyOf {
                     branch 'test'
                     branch 'prod'
                 }
             }
+
             steps {
                 sh '''
                 kubectl get pods -A
@@ -165,6 +171,7 @@ pipeline {
     post {
         success {
             echo "SUCCESS: ${BRANCH_NAME}"
+            echo "IMAGE TAG: ${IMAGE_TAG}"
         }
 
         failure {
