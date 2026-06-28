@@ -1,0 +1,609 @@
+---
+# Source: chat-app/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chat-dev
+---
+# Source: chat-app/templates/auth/secret.yaml
+apiVersion: v1
+kind: Secret
+
+metadata:
+  name: auth-secret
+  namespace: chat-dev
+
+type: Opaque
+
+stringData:
+  DB_USERNAME: admin
+  DB_PASSWORD: ChangeMe123!
+  JWT_SECRET: 3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007
+---
+# Source: chat-app/templates/chat/secret.yaml
+apiVersion: v1
+kind: Secret
+
+metadata:
+  name: chat-secret
+  namespace: chat-dev
+
+type: Opaque
+
+stringData:
+  MONGO_USERNAME: admin
+  MONGO_PASSWORD: password
+---
+# Source: chat-app/templates/auth/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: auth-config
+  namespace: chat-dev
+
+data:
+  SERVER_PORT: "8005"
+  DB_HOST: "chatdb.cb4ywoiqgmmt.ap-south-1.rds.amazonaws.com"
+  DB_NAME: "chatdb"
+---
+# Source: chat-app/templates/chat/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: chat-config
+  namespace: chat-dev
+
+data:
+  SERVER_PORT: "8010"
+  MONGO_URI: mongodb://admin:password@mongodb:27017/spring_chat_app?authSource=admin
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+---
+# Source: chat-app/templates/frontend/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: frontend-config
+  namespace: chat-dev
+
+data:
+  API_URL: "http://api-gateway"
+---
+# Source: chat-app/templates/mongodb/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: mongodb-pvc
+  namespace: chat-dev
+
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  storageClassName: gp2
+
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Source: chat-app/templates/redis/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: redis-pvc
+  namespace: chat-dev
+
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  storageClassName: gp2
+
+  resources:
+    requests:
+      storage: 2Gi
+---
+# Source: chat-app/templates/auth/service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: auth-service
+  namespace: chat-dev
+
+spec:
+  selector:
+    app: auth-service
+
+  ports:
+    - port: 8005
+      targetPort: 8005
+
+  type: ClusterIP
+---
+# Source: chat-app/templates/chat/service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: chat-service
+  namespace: chat-dev
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: chat-service
+
+  ports:
+    - port: 8010
+      targetPort: 8010
+---
+# Source: chat-app/templates/frontend/service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: frontend-service
+  namespace: chat-dev
+
+spec:
+  type: LoadBalancer
+
+  selector:
+    app: frontend
+
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# Source: chat-app/templates/mongodb/service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: mongodb
+  namespace: chat-dev
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: mongodb
+
+  ports:
+    - port: 27017
+---
+# Source: chat-app/templates/redis/service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: redis
+  namespace: chat-dev
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: redis
+
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+# Source: chat-app/templates/auth/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: auth-service
+  namespace: chat-dev
+
+spec:
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: auth-service
+
+  template:
+    metadata:
+      labels:
+        app: auth-service
+
+    spec:
+      containers:
+        - name: auth-service
+
+          image: "235130525547.dkr.ecr.ap-south-1.amazonaws.com/auth-service:latest"
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8005
+
+          env:
+            - name: SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: SERVER_PORT
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secret
+                  key: DB_USERNAME
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secret
+                  key: DB_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secret
+                  key: JWT_SECRET
+
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: DB_HOST
+
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-config
+                  key: DB_NAME
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            tcpSocket:
+              port: 8005
+            periodSeconds: 10
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: 8005
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 8005
+            initialDelaySeconds: 60
+            periodSeconds: 20
+---
+# Source: chat-app/templates/chat/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: chat-service
+  namespace: chat-dev
+
+spec:
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: chat-service
+
+  template:
+    metadata:
+      labels:
+        app: chat-service
+
+    spec:
+      containers:
+        - name: chat-service
+
+          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-service:latest
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8010
+
+          env:
+            - name: SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: SERVER_PORT
+
+            - name: MONGO_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: MONGO_URI
+
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: REDIS_HOST
+
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: chat-config
+                  key: REDIS_PORT
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            tcpSocket:
+              port: 8010
+            periodSeconds: 10
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 8010
+            initialDelaySeconds: 60
+            periodSeconds: 20
+---
+# Source: chat-app/templates/frontend/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: frontend
+  namespace: chat-dev
+
+spec:
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend
+
+          image: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-app-client:latest
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 80
+
+          env:
+            - name: API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: frontend-config
+                  key: API_URL
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+# Source: chat-app/templates/mongodb/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: mongodb
+  namespace: chat-dev
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: mongodb
+
+  template:
+    metadata:
+      labels:
+        app: mongodb
+
+    spec:
+      containers:
+        - name: mongodb
+
+          image: mongo:6
+
+          ports:
+            - containerPort: 27017
+
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+
+      volumes:
+        - name: mongo-storage
+
+          persistentVolumeClaim:
+            claimName: mongodb-pvc
+---
+# Source: chat-app/templates/redis/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: redis
+  namespace: chat-dev
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: redis
+
+  template:
+    metadata:
+      labels:
+        app: redis
+
+    spec:
+      containers:
+        - name: redis
+
+          image: redis:7
+
+          ports:
+            - containerPort: 6379
+
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+
+      volumes:
+        - name: redis-storage
+
+          persistentVolumeClaim:
+            claimName: redis-pvc
+---
+# Source: chat-app/templates/auth/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+metadata:
+  name: auth-hpa
+  namespace: chat-dev
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-service
+
+  minReplicas: 2
+  maxReplicas: 5
+
+  metrics:
+    - type: Resource
+
+      resource:
+        name: cpu
+
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Source: chat-app/templates/chat/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+metadata:
+  name: chat-hpa
+  namespace: chat-dev
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chat-service
+
+  minReplicas: 2
+  maxReplicas: 5
+
+  metrics:
+    - type: Resource
+
+      resource:
+        name: cpu
+
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Source: chat-app/templates/frontend/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+metadata:
+  name: frontend-hpa
+  namespace: chat-dev
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+
+  minReplicas: 2
+  maxReplicas: 5
+
+  metrics:
+    - type: Resource
+
+      resource:
+        name: cpu
+
+        target:
+          type: Utilization
+          averageUtilization: 70
