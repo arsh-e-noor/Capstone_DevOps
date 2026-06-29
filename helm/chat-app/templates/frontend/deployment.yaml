@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: frontend
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+
+  strategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend
+
+          image: {{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 80
+
+          env:
+            - name: API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: frontend-config
+                  key: API_URL
+
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config

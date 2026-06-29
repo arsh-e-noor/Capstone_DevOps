@@ -1,0 +1,48 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform variable files
+*.auto.tfvars
+
+# Sensitive files
+*.pem
+*.key
+
+# Terraform plan files
+*.tfplan
+
+# Ansible
+*.retry
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Application data
+app/mysql-data/
+app/mongodb-data/
+
+# Maven
+**/target/
+
+# Node
+**/node_modules/
+
+# Environment files
+.env
+.env.*

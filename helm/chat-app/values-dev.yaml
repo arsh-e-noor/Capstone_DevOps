@@ -1,0 +1,19 @@
+namespace: chat-dev
+
+auth:
+  replicas: 2
+  image:
+    repository: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/auth-service
+    tag: latest
+
+chat:
+  replicas: 2
+  image:
+    repository: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-service
+    tag: latest
+
+frontend:
+  replicas: 2
+  image:
+    repository: 235130525547.dkr.ecr.ap-south-1.amazonaws.com/chat-app-client
+    tag: latest
