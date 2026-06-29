@@ -53,10 +53,11 @@ The solution demonstrates:
 
 ![diagram](https://github.com/misterneo/spring-microservices-chat-app/assets/25622326/2f5e8edc-c5bc-4725-8f60-b863818b5d19)
 
-```markdown
+
 ## Architecture Diagram
-![Architecture Diagram](architecture.png)
-```
+
+![Architecture_Diagram](architecture.png)
+
 
 ### AWS Infrastructure
 
