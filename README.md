@@ -470,4 +470,8 @@ helm list -A
 15. Final Application Demonstration
 
 ```
+#Pipeline Running 
+https://www.loom.com/share/62d41ca52660443f8847d142ff7a09e2
+#App working and monitoring
+https://www.loom.com/share/a62fc097115a4c04b793ca7f21135534
 ```
